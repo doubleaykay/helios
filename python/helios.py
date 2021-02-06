@@ -2,7 +2,7 @@ import numpy
 import suncalc # sun library
 from datetime import datetime as dt
 import pytz
-
+import drawSvg as draw
 import helper # custom helper functions
 
 year = '2021'
@@ -22,6 +22,7 @@ year = '2021'
 # for each datetime, get sun position and color separating specific sun times
 
 # SVG
+# library imported as 'draw'
 # PARAM canvas size
 # determine size of minute rectangles
 # for each datetime and color, associate with rectangle and plot color
