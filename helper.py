@@ -1,5 +1,9 @@
 from math import pi, tau
 from colorsys import hls_to_rgb
+import png
+import numpy as np
+from datetime import datetime
+import suncalc
 
 
 # azimuth, altitude to color
@@ -44,7 +48,7 @@ def base_date_arr(year, flip):
     # arr_dt64 = np.flip(arr_dt64_noflip, axis=0)
     # arr_dt64 = arr_dt64_noflip
 
-    if flip return np.flip(arr_dt64_noflip, axis=0) else return arr_dt64_noflip
+    return np.flip(arr_dt64_noflip, axis=0) if flip else arr_dt64_noflip
 
     # return arr_dt64
 
@@ -85,3 +89,60 @@ def gen_svg(colors, d, width, height, x_tick, y_tick):
         x = it.multi_index[1] * x_tick  # get x position
         r = draw.Rectangle(x, y, x_tick, y_tick, fill=f'#{color}', stroke_width=0)  # create rectangle
         d.append(r)  # draw rectangle on canvas
+
+
+# tile each element
+# for PNG method
+def broadcast_tile(a, h, w):
+    # from https://stackoverflow.com/a/52346065
+    x, y = a.shape
+    m, n = x * h, y * w
+    return np.broadcast_to(
+        a.reshape(x, 1, y, 1), (x, h, y, w)
+    ).reshape(m, n)
+
+# timestamp to sun position to rgb color
+# for png method
+def pos_png(arr, lon, lat):
+    # get shape of old array
+    shape_old = arr.shape
+    # create empty array with old shape and depth 3
+    new_arr = np.empty((shape_old[0], shape_old[1], 3), dtype=np.uint8)
+
+    # print(type(arr[0,0]))
+
+    # iterate over every element in old array
+    it = np.nditer(arr, flags=['multi_index', 'refs_ok'])
+    for itm in it:
+        r_idx = (it.multi_index[0], it.multi_index[1], 0)
+        g_idx = (it.multi_index[0], it.multi_index[1], 1)
+        b_idx = (it.multi_index[0], it.multi_index[1], 2)
+
+        # print(type(itm[0]))
+
+        # get sun position
+        azi_alt = suncalc.get_position(itm.item(), lon, lat)
+        azi = azi_alt['azimuth']
+        alt = azi_alt['altitude']
+
+        # get color from position
+        rgb = get_color(azi, alt, sunrise_jump=0.2, hue_shift=0.0, as_hex=False)
+
+        # place rgb values in correct place
+        new_arr[r_idx] = rgb[0]
+        new_arr[g_idx] = rgb[1]
+        new_arr[b_idx] = rgb[2]
+
+    # flatten 3d array into 2d
+    new_lst2 = []
+    for row in new_arr:
+        new_lst2.append(row.flatten())
+
+    new_new_arr = np.array(new_lst2)
+
+    return new_new_arr
+
+
+# generate PNG using pixel data
+def gen_png(rgb_arr, fname):
+    png.from_array(rgb_arr, 'rgb').save(fname)
