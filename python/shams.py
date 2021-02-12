@@ -8,6 +8,8 @@ import numpy as np
 import suncalc
 import drawSvg as draw
 from datetime import datetime
+import math
+from colorsys import hls_to_rgb
 
 # import to test first color algorithm
 # from test_color import *
@@ -27,7 +29,8 @@ def base_date_arr(year):
     # transpose to get minutes as column vectors
     arr_dt64_noflip = lst_arr.T
     # flip array along axis 0 since SVG is filled from bottom left corner
-    arr_dt64 = np.flip(arr_dt64_noflip, axis=0)
+    # arr_dt64 = np.flip(arr_dt64_noflip, axis=0)
+    arr_dt64 = arr_dt64_noflip
     
     return arr_dt64
 
@@ -84,7 +87,7 @@ def gen_svg(colors, d, width, height, x_tick, y_tick):
     for color in it:
         y = it.multi_index[0] * y_tick # get y position
         x = it.multi_index[1] * x_tick # get x position
-        r = draw.Rectangle(x, y, x_tick, y_tick, fill=f'#{color}') # create rectangle
+        r = draw.Rectangle(x, y, x_tick, y_tick, fill=f'#{color}', stroke_width=0) # create rectangle
         d.append(r) # draw rectangle on canvas
 
 # main function
@@ -114,10 +117,12 @@ if __name__ == "__main__":
     # params
     # TTD get these from command line or interface
     year = 2021
-    lon = 71.0589
+    # lon = 71.0589
+    # lat = 42.3601
+    lon = -71.0589
     lat = 42.3601
     width = 1920
     height = 1080
-    outfile = 'color_test2.png'
+    outfile = 'color_test6.png'
 
     let_there_be_light(year, lon, lat, width, height, outfile)
