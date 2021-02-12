@@ -8,10 +8,9 @@ import numpy as np
 import suncalc
 import drawSvg as draw
 from datetime import datetime
-import math
-from colorsys import hls_to_rgb
 
-from helper_new import *
+from helper import *
+
 
 # import to test first color algorithm
 # from test_color import *
@@ -19,12 +18,12 @@ from helper_new import *
 # array of timestamps
 def base_date_arr(year):
     # get all days in year
-    days = np.arange(str(year), str(year+1), dtype='datetime64[D]')
+    days = np.arange(str(year), str(year + 1), dtype='datetime64[D]')
 
     # get minutes in each day as row vector
     lst = []
     for day in days:
-        lst.append(np.arange(day, day+1, dtype='datetime64[m]'))
+        lst.append(np.arange(day, day + 1, dtype='datetime64[m]'))
 
     # construct np.array
     lst_arr = np.array(lst)
@@ -33,16 +32,20 @@ def base_date_arr(year):
     # flip array along axis 0 since SVG is filled from bottom left corner
     # arr_dt64 = np.flip(arr_dt64_noflip, axis=0)
     arr_dt64 = arr_dt64_noflip
-    
+
     return arr_dt64
+
 
 # convert from array of datetime64 to normal datetime with the UTC timestamp attached
 # vectorized
 def dt64_to_dtUTC_noVec(dt64):
-    dt64 = np.datetime64(dt64) # correct dtype
+    dt64 = np.datetime64(dt64)  # correct dtype
     ts = (dt64 - np.datetime64('1970-01-01T00:00:00Z')) / np.timedelta64(1, 's')
     return datetime.utcfromtimestamp(ts)
+
+
 dt64_to_dtUTC = np.vectorize(dt64_to_dtUTC_noVec)
+
 
 # timestamp to sun position to color
 # vectorized
@@ -53,55 +56,38 @@ def pos_noVec(ts, lon, lat):
     alt = azi_alt['altitude']
 
     # turn positions into colors
-    color = get_color(azi, alt) # DAAAAAAAN!!
+    color = get_color(azi, alt)  # DAAAAAAAN!!
     return color
     # return pos_to_color(azi, alt) # test first color algorithm
+
+
 pos = np.vectorize(pos_noVec)
 
-# # azimuth, altitude to color
-# def get_color(azimuth, altitude):
-#     # adjust this to taste or make it an input. Ranges from 0 (no jump) to 1 (day is all white, night all black)
-#     sunrise_jump = 0.3
-#     assert 0 <= sunrise_jump <= 1, "sunrise_jump must be between 0 and 1 inclusive"
-
-#     # yes, this could be simplified, and no, don't try to do it please.
-#     altitude_scaled = (altitude / math.pi) * 2  # range [-1, 1]
-#     altitude_scaled *= 1 - sunrise_jump
-#     altitude_scaled += sunrise_jump if (altitude >= 0) else -sunrise_jump  # range []
-#     altitude_scaled /= 2
-#     altitude_scaled += 0.5  # range [0, 1]
-
-#     azimuth_scaled = (azimuth/math.tau) + 0.5  # range [0, 1]
-
-#     r, g, b = hls_to_rgb(azimuth_scaled, altitude_scaled, 1)
-#     r = round(255 * r)
-#     g = round(255 * g)
-#     b = round(255 * b)
-#     return "{0:02x}{1:02x}{2:02x}".format(r, g, b).upper()
 
 # color hex codes to svg
 def gen_svg(colors, d, width, height, x_tick, y_tick):
     # index tuple is (y,x)
     # # x is the axis 1 index
     # y is the axis 0 index
-    
-    it = np.nditer(colors, flags=['multi_index']) # keep track of index
+
+    it = np.nditer(colors, flags=['multi_index'])  # keep track of index
     for color in it:
-        y = it.multi_index[0] * y_tick # get y position
-        x = it.multi_index[1] * x_tick # get x position
-        r = draw.Rectangle(x, y, x_tick, y_tick, fill=f'#{color}', stroke_width=0) # create rectangle
-        d.append(r) # draw rectangle on canvas
+        y = it.multi_index[0] * y_tick  # get y position
+        x = it.multi_index[1] * x_tick  # get x position
+        r = draw.Rectangle(x, y, x_tick, y_tick, fill=f'#{color}', stroke_width=0)  # create rectangle
+        d.append(r)  # draw rectangle on canvas
+
 
 # main function
 def let_there_be_light(year, lon, lat, width, height, outfile):
     # times to sun positions to colors
-    arr_dt64 = base_date_arr(year) # numpy timestamps
-    arr_dtUTC = dt64_to_dtUTC(arr_dt64) # UTC timestamps
-    colored = pos(arr_dtUTC, lon, lat) # hex code colors
+    arr_dt64 = base_date_arr(year)  # numpy timestamps
+    arr_dtUTC = dt64_to_dtUTC(arr_dt64)  # UTC timestamps
+    colored = pos(arr_dtUTC, lon, lat)  # hex code colors
 
     # svg parameters
-    x_tick = width / 365 # days in a year
-    y_tick = height / 1440 # min in a day
+    x_tick = width / 365  # days in a year
+    y_tick = height / 1440  # min in a day
 
     # svg canvas
     d = draw.Drawing(width, height, displayInline=False)
@@ -114,6 +100,7 @@ def let_there_be_light(year, lon, lat, width, height, outfile):
     d.savePng(outfile)
 
     print('Done.')
+
 
 if __name__ == "__main__":
     # params
