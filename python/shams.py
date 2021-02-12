@@ -3,8 +3,7 @@ import suncalc
 import drawSvg as draw
 from datetime import datetime
 
-import colorsys
-
+# array of timestamps
 def base_date_arr(year):
     days = np.arange(str(year), str(year+1), dtype='datetime64[D]')
 
@@ -29,6 +28,7 @@ def dt64_to_dtUTC_noVec(dt64):
     return datetime.utcfromtimestamp(ts)
 dt64_to_dtUTC = np.vectorize(dt64_to_dtUTC_noVec)
 
+# timestamp to sun position to color
 def pos_noVec(ts, lon, lat):
     azi_alt = suncalc.get_position(ts, lon, lat)
     azi = azi_alt['azimuth']
@@ -37,6 +37,7 @@ def pos_noVec(ts, lon, lat):
     return color
 pos = np.vectorize(pos_noVec)
 
+# color hex codes to svg
 def gen_svg(colors, d, width, height, x_tick, y_tick):
     # x is the axis 1 index
     # y is the axis 0 index
@@ -49,7 +50,7 @@ def gen_svg(colors, d, width, height, x_tick, y_tick):
         r = draw.Rectangle(x, y, x_tick, y_tick, fill=f'#{color}')
         d.append(r)
 
-
+# main function
 def let_there_be_light(year, lon, lat, width, height, outfile):
     arr_dt64 = base_date_arr(year)
     arr_dtUTC = dt64_to_dtUTC(arr_dt64)
