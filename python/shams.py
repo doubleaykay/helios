@@ -16,7 +16,7 @@ from helper import *
 # from test_color import *
 
 # array of timestamps
-def base_date_arr(year):
+def base_date_arr(year, flip):
     # get all days in year
     days = np.arange(str(year), str(year + 1), dtype='datetime64[D]')
 
@@ -31,9 +31,11 @@ def base_date_arr(year):
     arr_dt64_noflip = lst_arr.T
     # flip array along axis 0 since SVG is filled from bottom left corner
     # arr_dt64 = np.flip(arr_dt64_noflip, axis=0)
-    arr_dt64 = arr_dt64_noflip
+    # arr_dt64 = arr_dt64_noflip
 
-    return arr_dt64
+    if flip return np.flip(arr_dt64_noflip, axis=0) else return arr_dt64_noflip
+
+    # return arr_dt64
 
 
 # convert from array of datetime64 to normal datetime with the UTC timestamp attached
