@@ -5,15 +5,15 @@ year = 2021
 
 lon = -71.0589
 lat = 42.3601
+timezone = 0  # shift from UTC, e.g. -5 for Boston. Leave at 0 until we fix suncalc timezone B.S.
+
 width = 1920
 height = 1080
 
-x_tick = round(width / 365)  # days in a year
-y_tick = round(height / 1440)  # min in a day
+print('Building array of datetime objects...')
+arr_dt_utc = base_date_arr(year, flip=True, timezone=timezone)  # UTC timestamps as datetime.datetime
+print('Calculating sun location and corresponding colors...')
+pixels = pos_png(arr_dt_utc, lon, lat, sunrise_jump=0.3, hue_shift=0.0)
 
-arr_dt64 = base_date_arr(year, flip=False)  # numpy timestamps
-arr_dtUTC = dt64_to_dtUTC(arr_dt64)  # UTC timestamps
-arr_tiled = broadcast_tile(arr_dtUTC, y_tick, x_tick)
-
-colored = pos_png(arr_tiled, lon, lat)
-gen_png(colored, 'test.png')
+print('Generating image...')
+gen_png(pixels, width, height, 'Boston')

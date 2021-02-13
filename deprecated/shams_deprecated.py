@@ -84,7 +84,7 @@ def gen_svg(colors, d, width, height, x_tick, y_tick):
 def let_there_be_light(year, lon, lat, width, height, outfile):
     # times to sun positions to colors
     arr_dt64 = base_date_arr(year)  # numpy timestamps
-    arr_dtUTC = dt64_to_dtUTC(arr_dt64)  # UTC timestamps
+    arr_dtUTC = arr_dt64.astype(datetime)  # UTC timestamps
     colored = pos(arr_dtUTC, lon, lat)  # hex code colors
 
     # svg parameters
