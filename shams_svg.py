@@ -10,7 +10,7 @@ from helper import *
 def let_there_be_light(year, lon, lat, width, height, outfile):
     # times to sun positions to colors
     arr_dt = base_date_arr(year, flip=False)  # UTC timestamps
-    colored = pos(arr_dt, lon, lat)  # hex code colors
+    colored = pos_svg(arr_dt, lon, lat)  # hex code colors
 
     # svg parameters
     x_tick = width / 365  # days in a year
