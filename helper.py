@@ -125,7 +125,8 @@ def pos_png(arr_dt, lon, lat, sunrise_jump=0.0, hue_shift=0.0):
 
 # generate PNG using pixel data
 def gen_png(rgb_arr, width, height, file_name):
+    if not '.png' in file_name: file_name = file_name + '.png'
     Image.fromarray(rgb_arr, mode="RGB") \
         .resize((rgb_arr.shape[1], height), Image.BOX) \
         .resize((width, height), Image.NEAREST) \
-        .save(file_name + '.png')
+        .save(file_name)
