@@ -1,13 +1,18 @@
-from math import pi, tau
-from colorsys import hls_to_rgb
-import png
 import numpy as np
-from datetime import datetime
+from math import pi, tau
+
+from datetime import datetime, timezone
+from tzwhere import tzwhere
+import pytz
 import suncalc
+
+from colorsys import hls_to_rgb
+from PIL import Image
+import drawSvg as draw
 
 
 # azimuth, altitude to color
-def get_color(azimuth, altitude, sunrise_jump=0.2, hue_shift=0, as_hex=True):
+def get_color(azimuth, altitude, sunrise_jump=0.2, hue_shift=0.0, as_hex=True):
     # ranges from 0 (no jump) to 1 (day is all white, night all black)
     assert 0 <= sunrise_jump <= 1, "sunrise_jump must be between 0 and 1 inclusive"
 
@@ -21,7 +26,7 @@ def get_color(azimuth, altitude, sunrise_jump=0.2, hue_shift=0, as_hex=True):
     altitude_scaled += sunrise_jump * (1 if altitude >= 0 else -1)  # range [-1, 1]
     lightness = altitude_scaled / 2 + 0.5  # range [0, 1]
 
-    hue = ((azimuth/tau) + 0.5 + hue_shift) % 1  # range [0, 1]
+    hue = ((azimuth / tau) + 0.5 + hue_shift) % 1  # range [0, 1]
 
     r, g, b = hls_to_rgb(hue, lightness, 1)
     r = round(255 * r)
@@ -30,51 +35,50 @@ def get_color(azimuth, altitude, sunrise_jump=0.2, hue_shift=0, as_hex=True):
     return "{0:02x}{1:02x}{2:02x}".format(r, g, b).upper() if as_hex else r, g, b
 
 
-# array of timestamps
-def base_date_arr(year, flip):
-    # get all days in year
-    days = np.arange(str(year), str(year + 1), dtype='datetime64[D]')
+# array of UTC timestamps as naive datetime objects
+def base_date_arr(year: int, flip: bool = False):
+    start_time = np.datetime64(str(year))
+    end_time = np.datetime64(str(year + 1))
 
-    # get minutes in each day as row vector
-    lst = []
-    for day in days:
-        lst.append(np.arange(day, day + 1, dtype='datetime64[m]'))
+    arr_dt_1d = np.arange(start_time, end_time, dtype='datetime64[m]').astype(datetime)  # 1D array
+    arr_utc_2d = arr_dt_1d.reshape(-1, 1440).transpose()  # 2D array with days as columns, time flowing top to bottom
 
-    # construct np.array
-    lst_arr = np.array(lst)
-    # transpose to get minutes as column vectors
-    arr_dt64_noflip = lst_arr.T
-    # flip array along axis 0 since SVG is filled from bottom left corner
-    # arr_dt64 = np.flip(arr_dt64_noflip, axis=0)
-    # arr_dt64 = arr_dt64_noflip
-
-    return np.flip(arr_dt64_noflip, axis=0) if flip else arr_dt64_noflip
-
-    # return arr_dt64
+    # flip array vertically since SVG is filled from bottom left corner
+    return np.flipud(arr_utc_2d) if flip else arr_utc_2d
 
 
-# convert from array of datetime64 to normal datetime with the UTC timestamp attached
-# vectorized
-def dt64_to_dtUTC_noVec(dt64):
-    dt64 = np.datetime64(dt64)  # correct dtype
-    ts = (dt64 - np.datetime64('1970-01-01T00:00:00Z')) / np.timedelta64(1, 's')
-    return datetime.utcfromtimestamp(ts)
-dt64_to_dtUTC = np.vectorize(dt64_to_dtUTC_noVec)
+# array of naive timestamps to array of time zone aware timestamps
+def to_utc(arr, lon, lat, use_dst: bool):
+    tz_str = tzwhere.tzwhere().tzNameAt(lon, lat)
+    tz = pytz.timezone(tz_str)
+
+    def one_dt_utc(dt):
+        return (dt - offset).replace(tzinfo=timezone.utc)
+
+    def one_dt_localized(dt):
+        return tz.localize(dt).astimezone(pytz.utc)
+
+    if use_dst:
+        return np.vectorize(one_dt_localized)(arr)
+    else:
+        offset = tz.utcoffset(arr[0, 0], is_dst=False)
+        return np.vectorize(one_dt_utc)(arr)
 
 
-# timestamp to sun position to color
-# vectorized
-def pos_noVec(ts, lon, lat):
-    # get sun positions
-    azi_alt = suncalc.get_position(ts, lon, lat)
-    azi = azi_alt['azimuth']
-    alt = azi_alt['altitude']
+# array of timestamps to sun position, then to hex color
+def pos_svg(arr_dt, lon, lat, sunrise_jump=0.0, hue_shift=0.0):
 
-    # turn positions into colors
-    color = get_color(azi, alt)  # DAAAAAAAN!!
-    return color
-    # return pos_to_color(azi, alt) # test first color algorithm
-pos = np.vectorize(pos_noVec)
+    # get shape of input array
+    shape_old = arr_dt.shape
+    # create empty array with old shape and depth 3
+    rgb_arr = np.empty(shape_old, dtype=np.str_)
+
+    for row_idx in range(shape_old[0]):
+        for col_idx in range(shape_old[1]):
+            azi_alt = suncalc.get_position(arr_dt[row_idx, col_idx], lon, lat)
+            rgb_arr[row_idx, col_idx] = get_color(azi_alt['azimuth'], azi_alt['altitude'],
+                                                  sunrise_jump=sunrise_jump, hue_shift=hue_shift, as_hex=True)
+    return rgb_arr
 
 
 # color hex codes to svg
@@ -91,58 +95,38 @@ def gen_svg(colors, d, width, height, x_tick, y_tick):
         d.append(r)  # draw rectangle on canvas
 
 
-# tile each element
-# for PNG method
-def broadcast_tile(a, h, w):
-    # from https://stackoverflow.com/a/52346065
-    x, y = a.shape
-    m, n = x * h, y * w
-    return np.broadcast_to(
-        a.reshape(x, 1, y, 1), (x, h, y, w)
-    ).reshape(m, n)
-
-# timestamp to sun position to rgb color
-# for png method
-def pos_png(arr, lon, lat):
-    # get shape of old array
-    shape_old = arr.shape
+# array of timestamps to sun positions, then to [r, g, b]]
+def pos_png(arr_dt, lon, lat, sunrise_jump=0.0, hue_shift=0.0):
+    # get shape of input array
+    shape_old = arr_dt.shape
     # create empty array with old shape and depth 3
-    new_arr = np.empty((shape_old[0], shape_old[1], 3), dtype=np.uint8)
+    rgb_arr = np.empty((shape_old[0], shape_old[1], 3), dtype=np.uint8)
 
-    # print(type(arr[0,0]))
+    for row_idx in range(shape_old[0]):
+        for col_idx in range(shape_old[1]):
+            azi_alt = suncalc.get_position(arr_dt[row_idx, col_idx], lon, lat)
+            r, g, b = get_color(azi_alt['azimuth'], azi_alt['altitude'],
+                                sunrise_jump=sunrise_jump, hue_shift=hue_shift, as_hex=False)
+            rgb_arr[row_idx, col_idx, 0] = r
+            rgb_arr[row_idx, col_idx, 1] = g
+            rgb_arr[row_idx, col_idx, 2] = b
 
-    # iterate over every element in old array
-    it = np.nditer(arr, flags=['multi_index', 'refs_ok'])
-    for itm in it:
-        r_idx = (it.multi_index[0], it.multi_index[1], 0)
-        g_idx = (it.multi_index[0], it.multi_index[1], 1)
-        b_idx = (it.multi_index[0], it.multi_index[1], 2)
+    return rgb_arr
 
-        # print(type(itm[0]))
 
-        # get sun position
-        azi_alt = suncalc.get_position(itm.item(), lon, lat)
-        azi = azi_alt['azimuth']
-        alt = azi_alt['altitude']
-
-        # get color from position
-        rgb = get_color(azi, alt, sunrise_jump=0.2, hue_shift=0.0, as_hex=False)
-
-        # place rgb values in correct place
-        new_arr[r_idx] = rgb[0]
-        new_arr[g_idx] = rgb[1]
-        new_arr[b_idx] = rgb[2]
-
-    # flatten 3d array into 2d
-    new_lst2 = []
-    for row in new_arr:
-        new_lst2.append(row.flatten())
-
-    new_new_arr = np.array(new_lst2)
-
-    return new_new_arr
+# def pixel_arr(arr, lon, lat, sunrise_jump, hue_shift):
+#     def dt_to_rgb(dt):
+#         azi_alt = suncalc.get_position(dt, lon, lat)
+#         r, g, b = get_color(azi_alt['azimuth'], azi_alt['altitude'],
+#                         sunrise_jump=sunrise_jump, hue_shift=hue_shift, as_hex=False)
+#         return [r, g, b]
+#     return np.vectorize(dt_to_rgb)(arr)
 
 
 # generate PNG using pixel data
-def gen_png(rgb_arr, fname):
-    png.from_array(rgb_arr, 'rgb').save(fname)
+def gen_png(rgb_arr, width, height, file_name):
+    if not '.png' in file_name: file_name = file_name + '.png'
+    Image.fromarray(rgb_arr, mode="RGB") \
+        .resize((rgb_arr.shape[1], height), Image.BOX) \
+        .resize((width, height), Image.NEAREST) \
+        .save(file_name)
