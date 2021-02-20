@@ -12,13 +12,25 @@ from helper import *
 # lon = 144.9631
 # lat = -37.8136
 
-img_title = 'Anchorage, AK'
-lon = -149.9003
-lat = 61.2181
+# img_title = 'Anchorage, AK'
+# lon = -149.9003
+# lat = 61.2181
 
 # img_title = 'Lahore, Pakistan'
 # lon = 74.329376
 # lat = 31.582045
+
+# img_title = 'Singapore'
+# lon = 103.851959
+# lat = 1.290270
+
+# img_title = 'Base Marambio, Antarctica'
+# lat = -64.25149364250075
+# lon = -56.65526998841897
+
+img_title = 'Reykjavik'
+lat = 64.128288
+lon = -21.827774
 
 year = 2021
 
