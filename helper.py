@@ -1,17 +1,14 @@
 import numpy as np
 from math import pi, tau
 
-from datetime import datetime, timezone
-from tzwhere import tzwhere
+from datetime import datetime
 import pytz
+import pandas as pd
+import timezonefinder
 import suncalc
 
 from colorsys import hls_to_rgb
 from PIL import Image
-import drawSvg as draw
-
-import pandas as pd
-import timezonefinder
 
 
 def time_arr(year, lon, lat, use_dst=True):
@@ -36,7 +33,7 @@ def time_arr(year, lon, lat, use_dst=True):
         # generate times
         times = pd.date_range(start_time, end_time, freq='min')
     
-    # convert to python datetime objects in numpy array
+    # convert to UTC then python datetime objects in numpy array
     return times.tz_convert('UTC').to_pydatetime()
 
 
