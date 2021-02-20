@@ -39,14 +39,13 @@ def time_arr(year: int, lon: float, lat: float, use_dst: bool = True) -> np.ndar
 
 
 # get azimuth and altitude from dates and location
-def sun_positions(arr_utc: np.ndarray, lon: float, lat: float) -> tuple[np.ndarray, np.ndarray]:
+def sun_positions(arr_utc: np.ndarray, lon: float, lat: float):
     sc = suncalc.get_position(arr_utc, lon, lat)
     return sc['azimuth'], sc['altitude']
 
 
 # azimuth, altitude to color
-def get_colors(azimuths: np.ndarray, altitudes: np.ndarray, sunrise_jump=0.0, hue_shift=0.0) \
-        -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def get_colors(azimuths: np.ndarray, altitudes: np.ndarray, sunrise_jump=0.0, hue_shift=0.0):
     # ranges from 0 (no jump) to 1 (day is all white, night all black)
     assert 0 <= sunrise_jump <= 1, "sunrise_jump must be between 0 and 1 inclusive"
 
