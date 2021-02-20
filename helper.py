@@ -10,6 +10,35 @@ from colorsys import hls_to_rgb
 from PIL import Image
 import drawSvg as draw
 
+import pandas as pd
+import timezonefinder
+
+
+def time_arr(year, lon, lat, use_dst=True):
+    # determine timezone based on lon, lat
+    tz_str = timezonefinder.TimezoneFinder().certain_timezone_at(lat=lat, lng=lon)
+    tz = pytz.timezone(tz_str)
+    
+    # generate local start and end times
+    # localize with derived time zone
+    start_time = pd.to_datetime(datetime(year, 1, 1))
+    end_time = pd.to_datetime(datetime(year, 12, 31, 23, 59))
+    
+    if use_dst:
+        # generate times
+        times = pd.date_range(start_time, end_time, freq='min') \
+            .tz_localize(tz, ambiguous=True, nonexistent='shift_forward')
+    else:
+        # convert to UTC to capture offset
+        start_time = start_time.tz_localize(tz).tz_convert('UTC')
+        end_time = end_time.tz_localize(tz).tz_convert('UTC')
+        
+        # generate times
+        times = pd.date_range(start_time, end_time, freq='min')
+    
+    # convert to python datetime objects in numpy array
+    return times.tz_convert('UTC').to_pydatetime()
+
 
 # azimuth, altitude to color
 def get_color(azimuth, altitude, sunrise_jump=0.2, hue_shift=0.0):
@@ -42,57 +71,10 @@ def get_color(azimuth, altitude, sunrise_jump=0.2, hue_shift=0.0):
     return r, g, b
 
 
-# array of UTC timestamps as naive datetime objects
-def base_date_arr(year: int):
-    start_time = np.datetime64(str(year))
-    end_time = np.datetime64(str(year + 1))
-
-    arr_dt_1d = np.arange(start_time, end_time, dtype='datetime64[m]').astype(datetime)  # 1D array
-
-    return arr_dt_1d
-
-
-# array of naive timestamps to array of time zone aware timestamps
-def to_utc(arr, lon, lat, use_dst: bool):
-    tz_str = tzwhere.tzwhere().tzNameAt(lon, lat)
-    tz = pytz.timezone(tz_str)
-
-    def one_dt_utc(dt):
-        return (dt - offset).replace(tzinfo=timezone.utc)
-
-    def one_dt_localized(dt):
-        return tz.localize(dt).astimezone(pytz.utc)
-
-    if use_dst:
-        return np.vectorize(one_dt_localized)(arr)
-    else:
-        # offset = tz.utcoffset(arr[0, 0], is_dst=False)
-        offset = tz.utcoffset(arr[0], is_dst=False)
-        return np.vectorize(one_dt_utc)(arr)
-
-
-# array of timestamps to sun positions, then to [r, g, b]]
-# def pos_png(arr_dt, lon, lat, sunrise_jump=0.0, hue_shift=0.0):
-#     # get shape of input array
-#     shape_old = arr_dt.shape
-#     # create empty array with old shape and depth 3
-#     rgb_arr = np.empty((shape_old[0], shape_old[1], 3), dtype=np.uint8)
-
-#     for row_idx in range(shape_old[0]):
-#         for col_idx in range(shape_old[1]):
-#             azi_alt = suncalc.get_position(arr_dt[row_idx, col_idx], lon, lat)
-#             r, g, b = get_color(azi_alt['azimuth'], azi_alt['altitude'],
-#                                 sunrise_jump=sunrise_jump, hue_shift=hue_shift, as_hex=False)
-#             rgb_arr[row_idx, col_idx, 0] = r
-#             rgb_arr[row_idx, col_idx, 1] = g
-#             rgb_arr[row_idx, col_idx, 2] = b
-
-#     return rgb_arr
-
-
 # stack RGB elements into 3d pixel array
 def stack_rgb(r, g, b):
-    new = np.empty((1440,365,3), dtype=np.uint8)
+    width = int(len(r) / 1440) # in case of leap year
+    new = np.empty((1440,width,3), dtype=np.uint8)
     new[:,:,0] = r.reshape((-1,1440)).T
     new[:,:,1] = g.reshape((-1,1440)).T
     new[:,:,2] = b.reshape((-1,1440)).T
