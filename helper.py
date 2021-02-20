@@ -1,8 +1,9 @@
 import numpy as np
 import pandas as pd
 from math import pi, tau
+from typing import Tuple
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 import timezonefinder
 import suncalc
@@ -25,7 +26,7 @@ def time_arr(year: int, lon: float, lat: float, use_dst: bool = True) -> np.ndar
     if use_dst:
         # generate times
         times = pd.date_range(start_time, end_time, freq='min') \
-            .tz_localize(tz, ambiguous=True, nonexistent='shift_forward')
+            .tz_localize(tz, ambiguous=True, nonexistent=timedelta(days=1))
     else:
         # convert to UTC to capture offset
         start_time = start_time.tz_localize(tz).tz_convert('UTC')
@@ -39,14 +40,14 @@ def time_arr(year: int, lon: float, lat: float, use_dst: bool = True) -> np.ndar
 
 
 # get azimuth and altitude from dates and location
-def sun_positions(arr_utc: np.ndarray, lon: float, lat: float) -> tuple[np.ndarray, np.ndarray]:
+def sun_positions(arr_utc: np.ndarray, lon: float, lat: float) -> Tuple[np.ndarray, np.ndarray]:
     sc = suncalc.get_position(arr_utc, lon, lat)
     return sc['azimuth'], sc['altitude']
 
 
 # azimuth, altitude to color
 def get_colors(azimuths: np.ndarray, altitudes: np.ndarray, sunrise_jump=0.0, hue_shift=0.0) \
-        -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     # ranges from 0 (no jump) to 1 (day is all white, night all black)
     assert 0 <= sunrise_jump <= 1, "sunrise_jump must be between 0 and 1 inclusive"
 
