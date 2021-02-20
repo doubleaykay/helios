@@ -1,6 +1,6 @@
-img_title = 'Boston, MA'
-lon = -71.0589
-lat = 42.3601
+# img_title = 'Boston, MA'
+# lon = -71.0589
+# lat = 42.3601
 
 # img_title = 'Koobi Fora, Kenya'
 # lon = 36.1844
@@ -17,6 +17,18 @@ lat = 42.3601
 # img_title = 'Lahore, Pakistan'
 # lon = 74.329376
 # lat = 31.582045
+
+# img_title = 'Singapore'
+# lon = 103.851959
+# lat = 1.290270
+
+# img_title = 'Base Marambio, Antarctica'
+# lat = -64.25149364250075
+# lon = -56.65526998841897
+
+img_title = 'Reykjavik'
+lat = 64.128288
+lon = -21.827774
 
 year = 2021
 
