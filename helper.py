@@ -12,7 +12,7 @@ from PIL import Image
 
 
 # generate initial 1d array of UTC datetime objects
-def time_arr(year: int, lon: float, lat: float, use_dst: bool = True) -> np.array:
+def time_arr(year: int, lon: float, lat: float, use_dst: bool = True) -> np.ndarray:
     # determine timezone based on lon, lat
     tz_str = timezonefinder.TimezoneFinder().certain_timezone_at(lat=lat, lng=lon)
     tz = pytz.timezone(tz_str)
@@ -39,13 +39,14 @@ def time_arr(year: int, lon: float, lat: float, use_dst: bool = True) -> np.arra
 
 
 # get azimuth and altitude from dates and location
-def sun_positions(arr_utc: np.array, lon: float, lat: float) -> np.array:
+def sun_positions(arr_utc: np.ndarray, lon: float, lat: float) -> tuple[np.ndarray, np.ndarray]:
     sc = suncalc.get_position(arr_utc, lon, lat)
     return sc['azimuth'], sc['altitude']
 
 
 # azimuth, altitude to color
-def get_colors(azimuths: np.array, altitudes: np.array, sunrise_jump=0.0, hue_shift=0.0) -> np.array:
+def get_colors(azimuths: np.ndarray, altitudes: np.ndarray, sunrise_jump=0.0, hue_shift=0.0) \
+        -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     # ranges from 0 (no jump) to 1 (day is all white, night all black)
     assert 0 <= sunrise_jump <= 1, "sunrise_jump must be between 0 and 1 inclusive"
 
@@ -75,7 +76,7 @@ def get_colors(azimuths: np.array, altitudes: np.array, sunrise_jump=0.0, hue_sh
 
 
 # stack RGB elements into 3d pixel array
-def stack_rgb(r: np.array, g: np.array, b: np.array) -> np.array:
+def stack_rgb(r: np.ndarray, g: np.ndarray, b: np.ndarray) -> np.ndarray:
     width = int(len(r) / 1440)  # in case of leap year
     new = np.empty((1440, width, 3), dtype=np.uint8)
     new[:, :, 0] = r.reshape((-1, 1440)).T
@@ -85,7 +86,7 @@ def stack_rgb(r: np.array, g: np.array, b: np.array) -> np.array:
 
 
 # generate PNG using pixel data
-def gen_png(rgb_arr: np.array, width_px: int, height_px: int, file_name: str) -> None:
+def gen_png(rgb_arr: np.ndarray, width_px: int, height_px: int, file_name: str) -> None:
     if file_name[-4:] != '.png':
         file_name = file_name + '.png'
     Image.fromarray(rgb_arr, mode="RGB") \
