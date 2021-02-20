@@ -1,6 +1,6 @@
 suncalc~=0.1.2
-drawSvg~=1.8.1
 numpy~=1.20.1
 pytz~=2021.1
-tzwhere~=3.0.3
 Pillow~=8.1.0
+pandas~=1.2.2
+timezonefinder~=5.2.0
