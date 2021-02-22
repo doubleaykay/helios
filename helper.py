@@ -94,3 +94,9 @@ def gen_png(rgb_arr: np.ndarray, width_px: int, height_px: int, file_name: str) 
         .resize((rgb_arr.shape[1], height_px), Image.BOX) \
         .resize((width_px, height_px), Image.NEAREST) \
         .save(file_name)
+
+def gen_png_to_stream(rgb_arr: np.ndarray, width_px: int, height_px: int, fp) -> None:
+    Image.fromarray(rgb_arr, mode="RGB") \
+        .resize((rgb_arr.shape[1], height_px), Image.BOX) \
+        .resize((width_px, height_px), Image.NEAREST) \
+        .save(fp)
