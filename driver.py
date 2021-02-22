@@ -51,8 +51,7 @@ height_px = 1080
 # gen_png(pixels, width_px, height_px, img_title)
 
 # object-oriented implementation
-# from dev_shams_class import Shams
-from shams.shams import Shams
+from dev_shams_class import Shams
 s = Shams(lon, lat, year, title=img_title, use_dst=use_dst, sunrise_jump=sunrise_jump, hue_shift=hue_shift)
 s.gen_png(width_px, height_px)
 
