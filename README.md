@@ -13,5 +13,3 @@ A pixel's hue corresponds to the sun's azimuth (angle North, East, South, or Wes
 Written in Python 3 and released under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0).
 
 Concept/code by [Anoush Khan](https://github.com/doubleaykay) and [Dan Strauss](https://github.com/DragonMarionette)
-
-Concept/code by Anoush Khan & Dan Strauss
