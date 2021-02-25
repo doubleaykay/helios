@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from math import pi, tau
-from typing import Tuple
+from typing import Union, Tuple, TextIO
 
 from datetime import datetime, timedelta
 import pytz
@@ -13,46 +13,66 @@ from PIL import Image
 
 
 class Shams:
-    def __init__(self, lon: float, lat: float, year: int, title: str = 'shams',
-                 use_dst: bool = False, sunrise_jump: float = 0.3, hue_shift: float = 0.0):
+    def __init__(self, lon: float, lat: float, start_dt: int, end_dt=None, title: str = 'shams', use_dst: bool = False,
+                 sunrise_jump: float = 0.3, hue_shift: float = 0.0):
         self.lon = lon
         self.lat = lat
-        self.year = year
+        self.start_dt = start_dt
+        self.end_dt = end_dt if end_dt is not None else start_dt + pd.Timedelta(365, unit='D')
         self.title = title
         self.use_dst = use_dst
         self.sunrise_jump = sunrise_jump
         self.hue_shift = hue_shift
 
     # generate png from self using specified dimensions
-    def gen_png(self, width_px, height_px, file_name: str = None):
-        if file_name is None:
-            file_name = self.title
-        if file_name[-4:] != '.png':
-            file_name = file_name + '.png'
-        arr_utc = self._time_arr()
+    def gen_png(self, width_px: int = None, height_px: int = None, file_name: str = None, file_pointer: TextIO = None):
+        assert file_name is None or file_pointer is None, 'Cannot specify both file_name and file_pointer'
+
+        arr_utc = self._time_arr(self.use_dst)
         azi, alt = self._sun_positions(arr_utc)
         r, g, b = self._get_colors(azi, alt)
         pixels = self._stack_rgb(r, g, b)
-        self._write_png(pixels, width_px, height_px, file_name)
 
-    def _time_arr(self) -> np.ndarray:
-        # determine timezone based on lon, lat
-        tz_str = timezonefinder.TimezoneFinder().certain_timezone_at(lat=self.lat, lng=self.lon)
-        tz = pytz.timezone(tz_str)
+        generated_shape = r.shape
+        if width_px is None:
+            width_px = generated_shape[1]
+        if height_px is None:
+            height_px = generated_shape[0]
 
+        if file_pointer is None:
+            if file_name is None:
+                file_name = self.title
+            file_name += '.png' * (not file_name.endswith('.png'))
+            self._write_png(pixels, width_px, height_px, file_name)
+        else:
+            self._stream_png(pixels, width_px, height_px, file_pointer)
+
+    def _time_arr(self, use_dst) -> np.ndarray:
         # generate local start and end times
         # localize with derived time zone
-        start_time = pd.to_datetime(datetime(self.year, 1, 1))
-        end_time = pd.to_datetime(datetime(self.year, 12, 31, 23, 59))
+        start_time = self.start_dt
+        end_time = self.end_dt
 
-        if self.use_dst:
+        if use_dst:
+            # use lat, lon to get local timezone
+            tz_str = timezonefinder.TimezoneFinder().certain_timezone_at(lat=self.lat, lng=self.lon)
+            try:
+                tz = pytz.timezone(tz_str)
+            except pytz.exceptions.UnknownTimeZoneError:
+                return self._time_arr(use_dst=False)
+
             # generate times
             times = pd.date_range(start_time, end_time, freq='min') \
                 .tz_localize(tz, ambiguous=True, nonexistent=timedelta(days=1))
         else:
+            # shift to appropriate 'timezone'
+            offset = pd.Timedelta(round(self.lon * 4), unit='min')  # 4 minutes (of time) per degree
+            start_time -= offset
+            end_time -= offset
+
             # convert to UTC to capture offset
-            start_time = start_time.tz_localize(tz).tz_convert('UTC')
-            end_time = end_time.tz_localize(tz).tz_convert('UTC')
+            start_time = start_time.tz_localize('UTC')
+            end_time = end_time.tz_localize('UTC')
 
             # generate times
             times = pd.date_range(start_time, end_time, freq='min')
@@ -113,6 +133,13 @@ class Shams:
             .resize((width_px, height_px), Image.NEAREST) \
             .save(file_name)
 
+    @staticmethod
+    def _stream_png(rgb_arr: np.ndarray, width_px: int, height_px: int, file_pointer: TextIO) -> None:
+        Image.fromarray(rgb_arr, mode="RGB") \
+            .resize((rgb_arr.shape[1], height_px), Image.BOX) \
+            .resize((width_px, height_px), Image.NEAREST) \
+            .save(file_pointer)
+
     @property
     def lon(self):
         return self._lon
@@ -132,13 +159,26 @@ class Shams:
         self._lat = lat
 
     @property
-    def year(self):
-        return self._year
+    def start_dt(self):
+        return self._start_dt
 
-    @year.setter
-    def year(self, year: int):
-        assert isinstance(year, int), 'year must be an integer'
-        self._year = year
+    @start_dt.setter
+    def start_dt(self, start_dt: Union[int, datetime]):
+        if isinstance(start_dt, int):
+            self._start_dt = pd.Timestamp(year=start_dt, month=1, day=1)
+        else:
+            self._start_dt = pd.Timestamp(start_dt).round('D')
+
+    @property
+    def end_dt(self):
+        return self._end_dt
+
+    @end_dt.setter
+    def end_dt(self, end_dt: Union[int, datetime]):
+        if isinstance(end_dt, int):
+            self._end_dt = pd.Timestamp(year=end_dt, month=1, day=1) - pd.Timedelta(1, unit='min')
+        else:
+            self._end_dt = pd.Timestamp(end_dt).round('D') - pd.Timedelta(1, unit='min')
 
     @property
     def title(self):

@@ -1,3 +1,6 @@
+from datetime import datetime
+from dev_shams_class import Shams
+
 # img_title = 'Boston, MA'
 # lon = -71.0589
 # lat = 42.3601
@@ -30,7 +33,8 @@ img_title = 'Reykjavik'
 lat = 64.128288
 lon = -21.827774
 
-year = 2021
+start_dt = datetime(2020, 12, 21)
+end_dt = None
 
 use_dst = True
 
@@ -51,8 +55,8 @@ height_px = 1080
 # gen_png(pixels, width_px, height_px, img_title)
 
 # object-oriented implementation
-from dev_shams_class import Shams
-s = Shams(lon, lat, year, title=img_title, use_dst=use_dst, sunrise_jump=sunrise_jump, hue_shift=hue_shift)
+s = Shams(lon, lat, start_dt, end_dt=end_dt, title=img_title, use_dst=use_dst, sunrise_jump=sunrise_jump,
+          hue_shift=hue_shift)
 s.gen_png(width_px, height_px)
 
 # af = datetime.now() - bef

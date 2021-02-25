@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from math import pi, tau
-from typing import Tuple
+from typing import Tuple, TextIO
 
 from datetime import datetime, timedelta
 import pytz
@@ -95,8 +95,9 @@ def gen_png(rgb_arr: np.ndarray, width_px: int, height_px: int, file_name: str) 
         .resize((width_px, height_px), Image.NEAREST) \
         .save(file_name)
 
-def gen_png_to_stream(rgb_arr: np.ndarray, width_px: int, height_px: int, fp) -> None:
+
+def gen_png_to_stream(rgb_arr: np.ndarray, width_px: int, height_px: int, file_pointer: TextIO) -> None:
     Image.fromarray(rgb_arr, mode="RGB") \
         .resize((rgb_arr.shape[1], height_px), Image.BOX) \
         .resize((width_px, height_px), Image.NEAREST) \
-        .save(fp)
+        .save(file_pointer)
